@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>App Lock Example</title>
+  <style>
+ input {
+     padding: 15px;
+     border-radius: 10px; 
+     margin: 8px;   
+ }   
+ 
+ input:focus {
+   outline: none;     
+   border: 2px solid blue;  
+ }
+ 
+ .load {
+   outline: none;     
+   border: 2px solid blue;       
+ }  
+ 
+ input[type="submit"] {
+     padding: 10px;
+     border: none;
+     background-color: blue;
+     color: white;
+     font-weight: bold;
+     border-radius: 10px;     
+ }
+ 
+ form {
+     display: grid;
+     place-items: center;
+ }
+ 
+ header {
+     text-align: center;
+ }
+ 
+ .err, .err:focus {
+   border: 2px solid red; 
+ }
+ 
+ a {
+     text-decoration: none;
+ }
+ 
+  </style>
+</head>
+<body>
+   <header>
+  <h1>Welcome to GitHub</h1>
+  <p>Please log in to continue or <a href="#" id="signup">sign up</a></p>
+</header>
+
+  <main>
+  <section id="login-section">
+   <form>     
+ <input type="text" placeholder="Enter your username" id="username"> 
+ <input type="password" placeholder="Enter your password" id="password">
+ <input type="submit" value="Login" id="login">
+ <div id="err-msg"></div>
+  </form>   
+  </section>   
+      
+  </main>  
+  
+<script>
+
+const SALT = "myCustomGithub"; 
+   
+const form = document.querySelector('form');
+const username = document.getElementById('username');
+const password = document.getElementById('password');
+
+let isLogin = true;
+
+// Auto detect if user account already exist changing the text to Login or Sign Up
+if(localStorage.getItem('username') === null) {
+ document.getElementById('login').value = 'Sign Up';
+ isLogin = false;
+ }
+
+form.addEventListener('submit', async function (e) {
+e.preventDefault(); // prevent default submit
+
+const pv = password.value.trim();
+const uv = username.value.trim();
+
+
+if(uv.length < 3 || uv.length > 20) {
+   username.classList.add('err'); 
+   msg('Invalid username length', 'red');   
+   return;
+} else if(pv.length < 8 || pv.length > 64) {
+   password.classList.add('err');
+    msg('Invalid password length', 'red');
+    return;
+} else {
+    msg(null, null, 'none');
+    for(const e of [username, password]){
+   e.classList.remove('err');
+   e.classList.add('load')        
+    }
+}
+
+ const userHash = await hashed(uv);
+ const passHash = await hashed(pv);
+
+// User doesn't exist store localStorage 
+if(!isLogin) {
+localStorage.setItem('username', userHash);
+localStorage.setItem('password', passHash);  
+msg('Registration successful now login to proceed', 'green'); 
+setTimeout(() => {
+    location.reload();
+}, 3000);
+} else {
+const storedUser = localStorage.getItem('username');
+const storedPass = localStorage.getItem('password');
+
+if(userHash === storedUser && passHash === storedPass) {
+msg('Login successful', 'green'); 
+setTimeout(() => {
+    window.location.href = 'https://github.com/dashboard';  
+}, 3000);    
+} else {
+   msg('Invalid credentials', 'red');
+   for(const e of [username, password]){
+   e.classList.add('err');     
+    }
+}
+
+}
+});       
+
+
+// Capture and set error message 
+function msg(text, color, display) {
+const errMsg = document.getElementById('err-msg'); 
+errMsg.textContent = text;
+errMsg.style.color = color;
+errMsg.style.display = display || 'block';
+}
+
+
+// Hash function using SHA-256
+async function hashed(password) {
+  const msgBuffer = new TextEncoder().encode(password + SALT);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join('');
+}
+
+
+// Safely provide sign up options effortless 
+document.getElementById('signup').onclick = function () {
+localStorage.removeItem('username');
+localStorage.removeItem('password');
+location.reload();
+}
+
+
+</script>
+</body>
+</html>
